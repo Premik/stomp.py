@@ -164,7 +164,9 @@ class BaseTransport(stomp.listener.Publisher):
         frame_type = f.cmd.lower()
         if frame_type in ['connected', 'message', 'receipt', 'error', 'heartbeat']:
             if frame_type == 'message':
-                (f.headers, f.body) = self.notify('before_message', f.headers, f.body)
+                ret = self.notify('before_message', f.headers, f.body)
+                if ret:
+                    (f.headers, f.body) =ret
             self.notify(frame_type, f.headers, f.body)
             if log.isEnabledFor(logging.DEBUG):
                 log.debug("Received frame: %r, headers=%r, body=%r", f.cmd, f.headers, f.body)
