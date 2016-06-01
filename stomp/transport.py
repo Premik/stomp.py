@@ -342,7 +342,8 @@ class BaseTransport(stomp.listener.Publisher):
                 except exception.InterruptedException:
                     log.debug("socket read interrupted, restarting")
                     continue
-            except Exception:
+            except Exception as e:
+                log.exception(e)
                 c = b''
             if len(c) == 0:
                 raise exception.ConnectionClosedException()
