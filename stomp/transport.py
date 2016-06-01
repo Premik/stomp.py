@@ -167,11 +167,12 @@ class BaseTransport(stomp.listener.Publisher):
                 ret = self.notify('before_message', f.headers, f.body)
                 if ret:
                     (f.headers, f.body) =ret
-            self.notify(frame_type, f.headers, f.body)
+
             if log.isEnabledFor(logging.DEBUG):
                 log.debug("Received frame: %r, headers=%r, body=%r", f.cmd, f.headers, f.body)
             else:
                 log.info("Received frame: %r, headers=%r, len(body)=%r", f.cmd, f.headers, utils.length(f.body))
+            self.notify(frame_type, f.headers, f.body)
         else:
             log.warning("Unknown response frame type: '%s' (frame length was %d)", frame_type, utils.length(frame_str))
 
@@ -200,7 +201,6 @@ class BaseTransport(stomp.listener.Publisher):
         elif frame_type == 'disconnected':
             self.set_connected(False)
 
-        rtn = None
         for listener in self.listeners.values():
             if not listener:
                 continue
@@ -224,8 +224,7 @@ class BaseTransport(stomp.listener.Publisher):
             rtn = notify_func(headers, body)
             if rtn:
                 (headers, body) = rtn
-        if rtn:
-            return rtn
+        return (headers, body)
 
     def transmit(self, frame):
         """
@@ -542,7 +541,7 @@ class Transport(BaseTransport):
                     # unwrap seems flaky on Win with the back-ported ssl mod, so catch any exception and log it
                     #
                     _, e, _ = sys.exc_info()
-                    log.warn(e)
+                    log.warning(e)
             elif hasattr(socket, 'SHUT_RDWR'):
                 try:
                     self.socket.shutdown(socket.SHUT_RDWR)
@@ -550,7 +549,7 @@ class Transport(BaseTransport):
                     _, e, _ = sys.exc_info()
                     # ignore when socket already closed
                     if get_errno(e) != errno.ENOTCONN:
-                        log.warn("Unable to issue SHUT_RDWR on socket because of error '%s'", e)
+                        log.warning("Unable to issue SHUT_RDWR on socket because of error '%s'", e)
 
         #
         # split this into a separate check, because sometimes the socket is nulled between shutdown and this call
@@ -560,7 +559,7 @@ class Transport(BaseTransport):
                 self.socket.close()
             except socket.error:
                 _, e, _ = sys.exc_info()
-                log.warn("Unable to close socket because of error '%s'", e)
+                log.warning("Unable to close socket because of error '%s'", e)
         self.current_host_and_port = None
 
     def send(self, encoded_frame):
